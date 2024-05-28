@@ -1,0 +1,221 @@
+create database newUniEffApp;
+use newUniEffApp;
+
+CREATE TABLE efficiency (
+    
+    date DATETIME,
+    branch_id VARCHAR(255),
+    line_no INT,
+    style VARCHAR(255),
+    po_no VARCHAR(255),
+    qty INT,
+    mo INT,
+    hel INT,
+    iron INT,
+    smv double,
+    cm double,
+    forcast_pcs INT,
+    forcast_sah double,
+    forcast_eff double,
+    actual_pcs INT,
+    actual_sah double,
+    actual_eff double,
+    income double,
+    PRIMARY KEY (style, date)
+);
+
+-- alteration temporarly
+ALTER TABLE efficiency
+DROP PRIMARY KEY, 
+ADD PRIMARY KEY (style, date,po_no); -- to the update I have added po_no
+
+ALTER TABLE daily_figures
+DROP PRIMARY KEY, 
+ADD PRIMARY KEY (style, date,po_no); -- to the update I have added po_no
+
+ALTER TABLE hourly_figures ADD COLUMN po_no VARCHAR(255) NOT NULL;  -- Adding the 'po_no' column
+
+ ALTER TABLE hourly_figures
+DROP PRIMARY KEY, 
+ADD PRIMARY KEY (date,line_no,style,hourslot,po_no); -- Adding 'po_no' as a primary key
+
+select * from daily_figures where date='2024-05-17';
+select * from daily_figures where date='2024-05-18' and branch_id='Hettipola Factory' AND style='3M94';
+
+
+
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    
+    email VARCHAR(255) UNIQUE,
+    password_hash VARCHAR(255),
+    salt VARCHAR(255),
+    first_name VARCHAR(255),
+    last_name VARCHAR(255),
+    factory varchar(225),
+     
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+
+
+
+CREATE TABLE daily_figures (
+    
+    date DATETIME not null,
+    branch_id VARCHAR(255)not null,
+    line_no INT not null,
+    style VARCHAR(255) not null,
+    po_no VARCHAR(255)not null,
+    qty_range VARCHAR(255) not null,
+    qty INT not null,
+    mo INT not null,
+    hel INT not null,
+    iron INT not null,
+    smv double not null,
+	wMin INT not null,
+    forcast_pcs INT not null,
+     
+    
+    PRIMARY KEY (style, date) -- this should be change as style and date so that same style cannot add daily
+);
+-- remember to execute this 
+ALTER TABLE daily_figures
+DROP PRIMARY KEY, 
+ADD PRIMARY KEY (style, date, line_no);
+
+
+CREATE TABLE hourly_figures (
+    date DATETIME NOT NULL,
+    branch_id VARCHAR(255) NOT NULL,
+    line_no INT NOT NULL,
+    style VARCHAR(255) NOT NULL,
+    hourqty INT NOT NULL,
+    hourslot VARCHAR(255) NOT NULL,
+    
+    PRIMARY KEY (date, line_no, style,hourslot)  -- this should be update as 
+);
+
+select * from hourly_figures;
+
+CREATE TABLE monthly_target(
+	branch_id VARCHAR(255) NOT NULL,
+    inc_month int NOT NULL,
+    inc_year int not null,
+    income double not null,
+    w_days int not null,
+    
+    
+    primary key(inc_month,branch_id,inc_year)
+);
+
+-- monthly plan upload
+CREATE TABLE monthly_plan (
+    branch_id Varchar(50) not null,
+    pln_month INT not null,
+    pln_year int not null,
+    line_no INT not null,
+    style VARCHAR(255) not null,
+    po_no VARCHAR(255) not null,
+    qty INT not null,
+    smv DOUBLE not null,
+    PRIMARY KEY (branch_id, pln_month,pln_year,po_no,style)
+);
+ 
+ 
+select * from monthly_target; 
+ 
+select * from monthly_plan order by line_no;
+select  po_no from monthly_plan where branch_id='Hettipola Factory' and pln_month='05' and pln_year='2024' and line_no='01';
+select style from monthly_plan where branch_id='Hettipola Factory' and pln_month='05' and pln_year='2024' and line_no='01' and po_no='64700'; 
+SELECT income
+FROM monthly_target
+WHERE branch_id = "Hettipola Factory" AND inc_month = 13;
+
+
+
+
+
+
+
+
+select * from efficiency;
+select * from efficiency;
+select * from daily_figures;
+
+select * from daily_figures where date='2024-03-14';
+select * from hourly_figures;
+select * from hourly_figures where line_no=1 and style='STO1';
+select * from hourly_figures where line_no = 2 && style = "STO074" && branch_id="Hettipola Factory";
+select * from users;
+select * from efficiency where branch_id="Bakamuna 2 Factory";
+
+
+
+
+SELECT
+    hf.date,
+    hf.branch_id,
+    hf.line_no,
+    hf.style,
+    hf.hourqty,
+    hf.hourslot,
+    df.qty,
+    df.mo,
+    df.hel,
+    df.iron,
+    df.smv,
+    df.forcast_pcs
+FROM
+    hourly_figures hf
+JOIN
+    daily_figures df ON hf.date = df.date
+    AND hf.branch_id = df.branch_id
+    AND hf.line_no = df.line_no
+    AND hf.style = df.style
+WHERE
+    hf.branch_id ='Hettipola Factory'  -- Replace ? with the actual branchId value
+    AND hf.date = '2024-03-02' 
+    AND df.line_no = '2'
+    AND df.style = 'ST01'-- Replace ? with the actual date value
+     -- Additional condition for style filtering
+ORDER BY
+    hf.hourslot;
+
+
+select * from hourly_figures;
+
+SELECT DISTINCT
+    line_no,
+    style
+FROM
+    hourly_figures
+WHERE
+    date = '2024-03-02'
+    AND branch_id = 'Hettipola Factory'
+ORDER BY
+    line_no, style;
+
+
+-- check 
+
+select * from efficiency where branch_id='Hettipola Factory' and date='2024-05-09';
+SELECT 
+    DATE_FORMAT(date, '%Y-%m-%d') AS `Date`,
+    SUM(income) AS `Total Income`
+FROM 
+    efficiency
+WHERE 
+    branch_id = 'Hettipola Factory'
+    AND MONTH(date) = '03' -- Change '03' to the desired month
+GROUP BY 
+    DATE_FORMAT(date, '%Y-%m-%d')
+ORDER BY 
+    `Date` ASC;
+
+
+
+-- query for getting the styles in the efficiency table by date line and factory
+
+select style from efficiency where line_no=5 and date="2024-03-14" and branch_id="Hettipola Factory";
