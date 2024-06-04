@@ -1,0 +1,141 @@
+create table lost_time(
+	branch_id varchar(50) not null,
+    lost_date date not null,
+    lost_zone varchar(100) not null,
+    line_no int not null,
+    po varchar(100) not null,
+    style varchar(100) not null,
+    r_department varchar(100) not null,
+    r_person varchar(100) not null,
+    lost_reason varchar(100) not null,
+    s_time time not null,
+    e_time time not null,
+    time_differ time not null, 
+    memb_count int not null,
+    sah double not null,
+    loss_value double not null,
+    primary key(lost_date,branch_id,style,lost_reason)
+
+
+);
+
+
+====================================Backend==========================
+
+//==================API Endpoints for Lost Time report====================//
+
+
+//api endpoint for insert data into losttime table
+app.post('/losttime', async (req, res) => {
+    try {
+        let data = req.body;
+ 
+        const query = 'INSERT INTO lost_time (branch_id,lost_date,lost_zone,line_no,po,style,r_department,r_person,lost_reason,s_time,e_time,time_differ,memb_count,sah,loss_value) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+        const result = await connection.query(query, [data.branch_id,data.lost_date,data.lost_zone,data.line_no,data.po,data.style,data.r_department,data.r_person,data.lost_reason,data.s_time,data.e_time,data.time_differ,data.memb_count,data.sah,data.loss_value]);
+
+        console.log('Data inserted successfully:', result);
+        res.status(200).json({ message: 'Data inserted successfully' });
+    } catch (error) {
+        console.error('Error in POST /losttime:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+
+//End point for get all lostitme data
+app.get('/losttime', async (req, res) => {
+    try {
+        const query = 'SELECT * FROM lost_time';
+        const results = await connection.query(query);
+        res.json(results);
+    } catch (error) {
+        console.error('Error in GET /losttime:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+
+//endpoint for get lostitme data with respect to date and factory
+app.get('/losttimebydatefactory', async (req, res) => {
+    try {
+        const { factory,date } = req.query;
+
+        // Check if all parameters are provided
+        if (!factory  || !date) {
+            return res.status(400).json({ error: 'Factory,Date are required' });
+        }
+
+        // Construct the SQL query to fetch qty and smv based on the given parameters
+        const query = `SELECT * from lost_time where branch_id=? and lost_date=?`;
+
+        // Execute the SQL query with parameters using the MySQLConnection class
+        const results = await connection.query(query, [factory, date]);
+
+        // Check if results are found
+        if (results.length === 0) {
+            return res.status(404).json({ error: 'No data found for the given parameters' });
+        }
+
+        // Extract qty and smv from the results
+        
+
+        res.json(results);
+    } catch (error) {
+        console.error('Error in GET /losttimebydatefactory:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+
+//api for lost time by month
+
+app.get('/losttimebymonthyearfactory', async (req, res) => {
+    try {
+        const { factory,month,year } = req.query;
+
+        // Check if all parameters are provided
+        if (!factory  || !month || !year) {
+            return res.status(400).json({ error: 'Factory,Month and year are required' });
+        }
+
+        // Construct the SQL query to fetch qty and smv based on the given parameters
+        const query = `
+                SELECT lt.r_department, 
+                SUM(lt.sah) AS total_sah, 
+                SUM(lt.loss_value) AS total_loss_value,
+                COALESCE(cd.current_date_sah, 0) AS current_date_sah,
+                COALESCE(cd.current_date_lost_value, 0) AS current_date_lost_value
+                FROM lost_time lt
+                LEFT JOIN (
+                    SELECT r_department, 
+                    SUM(sah) AS current_date_sah,
+                    SUM(loss_value) AS current_date_lost_value
+                    FROM lost_time
+                    WHERE branch_id = ?
+                    AND lost_date = CURDATE()
+                    GROUP BY r_department
+                ) cd ON lt.r_department = cd.r_department
+                WHERE lt.branch_id = ?
+                AND MONTH(lt.lost_date) = ?
+                AND YEAR(lt.lost_date) = ?
+                GROUP BY lt.r_department, cd.current_date_sah, cd.current_date_lost_value
+                ORDER BY lt.r_department;
+        `;
+
+        // Execute the SQL query with parameters using the MySQLConnection class
+        const results = await connection.query(query, [factory,factory, month,year]);
+
+        // Check if results are found
+        if (results.length === 0) {
+            return res.status(404).json({ error: 'No data found for the given parameters' });
+        }
+
+        // Extract qty and smv from the results
+        
+
+        res.json(results);
+    } catch (error) {
+        console.error('Error in GET /losttimebymonthyearfactory:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
